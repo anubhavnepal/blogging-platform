@@ -24,7 +24,11 @@ export default function HomePage() {
             <div className="w-5 h-5 rounded-md gradient-accent flex items-center justify-center text-slate-950 font-bold text-xs">C</div>
             <span className="font-bold text-slate-300">Chronicle Publication Systems</span>
           </div>
-          <p>© 2026 Chronicle. Built with Next.js 16, Supabase, and Tailwind CSS.</p>
+          <div className="flex items-center gap-4 text-slate-400">
+            <a href="/privacy" className="hover:text-emerald-400 transition-colors font-medium">Privacy Policy</a>
+            <span>•</span>
+            <p>© 2026 Chronicle. Built with Next.js 16, Supabase, and Tailwind CSS.</p>
+          </div>
         </div>
       </footer>
     </main>

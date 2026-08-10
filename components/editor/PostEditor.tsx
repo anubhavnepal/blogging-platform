@@ -16,7 +16,15 @@ import {
   Tag, 
   UserCheck, 
   CheckCircle2,
-  LayoutDashboard
+  Bold,
+  Italic,
+  Heading1,
+  Heading2,
+  List,
+  Quote,
+  Code,
+  Link as LinkIcon,
+  Loader2
 } from 'lucide-react'
 
 const COVER_PRESETS = [
@@ -25,6 +33,8 @@ const COVER_PRESETS = [
   'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=1200&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1200&auto=format&fit=crop&q=80'
 ]
+
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB Limit
 
 export function PostEditor() {
   const router = useRouter()
@@ -36,12 +46,14 @@ export function PostEditor() {
   const { currentUser, posts, addPost, updatePost, setIsAuthModalOpen } = useApp()
 
   const [editingPostId, setEditingPostId] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const [title, setTitle] = useState('')
   const [excerpt, setExcerpt] = useState('')
-  const [content, setContent] = useState('# Introduction\n\nStart writing your technical publication using Markdown formatting...\n\n### Key Highlights\n- Feature 1\n- Feature 2')
+  const [content, setContent] = useState('')
   const [category, setCategory] = useState('Engineering')
-  const [tagsInput, setTagsInput] = useState('Nextjs, TypeScript, Supabase')
+  const [tagsInput, setTagsInput] = useState('Engineering, Tech')
   const [coverImage, setCoverImage] = useState(COVER_PRESETS[0])
 
   // Determine current active sub-mode
@@ -64,9 +76,9 @@ export function PostEditor() {
     } else if (action === 'new') {
       setTitle('')
       setExcerpt('')
-      setContent('# Introduction\n\nStart writing your technical publication...\n')
+      setContent('')
       setCategory('Engineering')
-      setTagsInput('Nextjs, TypeScript')
+      setTagsInput('Engineering, Tech')
       setCoverImage(COVER_PRESETS[0])
       setEditingPostId(null)
     }
@@ -134,59 +146,99 @@ export function PostEditor() {
   }
   // ==================== END VERIFICATION GATE CHECK ====================
 
-  const handleSavePost = (publishStatus: 'published' | 'draft') => {
+  const handleSavePost = async (publishStatus: 'published' | 'draft') => {
     if (!title.trim() || !content.trim()) {
       alert('Please provide an article title and body content.')
       return
     }
 
+    setIsSaving(true)
     const tagsArray = tagsInput.split(',').map(t => t.trim()).filter(Boolean)
     const isPub = publishStatus === 'published'
 
-    if (editingPostId) {
-      updatePost(editingPostId, {
-        title,
-        excerpt,
-        content,
-        category,
-        tags: tagsArray,
-        coverImage,
-        isPublished: isPub,
-        status: publishStatus
-      })
-    } else {
-      addPost({
-        title,
-        slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
-        excerpt: excerpt || title,
-        content,
-        coverImage,
-        category,
-        tags: tagsArray,
-        authorId: currentUser.id,
-        authorName: currentUser.fullName,
-        authorAvatar: currentUser.avatarUrl,
-        authorUsername: currentUser.username,
-        isPublished: isPub,
-        readTime: `${Math.max(2, Math.ceil(content.split(' ').length / 150))} min read`,
-        status: publishStatus
-      })
+    try {
+      if (editingPostId) {
+        await updatePost(editingPostId, {
+          title,
+          excerpt: excerpt || title,
+          content,
+          category,
+          tags: tagsArray,
+          coverImage,
+          isPublished: isPub,
+          status: publishStatus
+        })
+      } else {
+        await addPost({
+          title,
+          slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+          excerpt: excerpt || title,
+          content,
+          coverImage,
+          category,
+          tags: tagsArray,
+          authorId: currentUser.id,
+          authorName: currentUser.fullName,
+          authorAvatar: currentUser.avatarUrl,
+          authorUsername: currentUser.username,
+          isPublished: isPub,
+          readTime: `${Math.max(2, Math.ceil(content.split(/\s+/).length / 150))} min read`,
+          status: publishStatus
+        })
+      }
+      router.push('/editor')
+    } catch (err) {
+      console.error('Save error:', err)
+      alert('An error occurred while saving to the server.')
+    } finally {
+      setIsSaving(false)
     }
-    router.push('/editor')
   }
 
-  // Handle custom image file upload via local file reader
+  // Handle custom image file upload with strict validation
   const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUploadError(null)
     const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setCoverImage(reader.result)
-        }
-      }
-      reader.readAsDataURL(file)
+    if (!file) return
+
+    // 1. Strict File Type Validation (Images Only)
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Invalid file type. Only image files (PNG, JPG, WEBP, GIF) are allowed.')
+      return
     }
+
+    // 2. Size Limit Check (5MB max)
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setUploadError('File is too large! Please select an image under 5 MB.')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        setCoverImage(reader.result)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Formatting Toolbar Helper for Content Area
+  const applyFormatting = (prefix: string, suffix: string = '') => {
+    const textarea = document.getElementById('article-content-textarea') as HTMLTextAreaElement
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selectedText = content.substring(start, end)
+    const replacement = `${prefix}${selectedText || 'text'}${suffix}`
+
+    const newContent = content.substring(0, start) + replacement + content.substring(end)
+    setContent(newContent)
+
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + prefix.length, end + prefix.length + (selectedText ? 0 : 4))
+    }, 0)
   }
 
   // When NOT editing, render standard AuthorDashboard with top Author Studio header
@@ -239,7 +291,7 @@ export function PostEditor() {
                 </div>
               </div>
               <div className="prose prose-invert prose-emerald max-w-none whitespace-pre-wrap font-sans text-slate-200 leading-relaxed">
-                {content}
+                {content || <em className="text-slate-500">No content entered yet...</em>}
               </div>
             </div>
           ) : (
@@ -300,8 +352,14 @@ export function PostEditor() {
                   <span className="flex items-center gap-1.5">
                     <ImageIcon className="w-4 h-4 text-emerald-400" /> Featured Image
                   </span>
-                  <span className="text-[11px] text-slate-500 font-normal">Select preset or upload custom</span>
+                  <span className="text-[11px] text-slate-500 font-normal">Select preset or upload custom (Max 5MB)</span>
                 </label>
+
+                {uploadError && (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-300 font-medium">
+                    {uploadError}
+                  </div>
+                )}
 
                 {/* Upload or Image URL bar */}
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -336,11 +394,78 @@ export function PostEditor() {
                 </div>
               </div>
 
+              {/* Article Body Content with Formatting Toolbar */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Article Body Content</label>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Article Body Content</label>
+                  
+                  {/* Quick Formatting Toolbar */}
+                  <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg p-1 text-slate-300">
+                    <button
+                      type="button"
+                      title="Bold"
+                      onClick={() => applyFormatting('**', '**')}
+                      className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400 transition"
+                    >
+                      <Bold className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Italic"
+                      onClick={() => applyFormatting('*', '*')}
+                      className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400 transition"
+                    >
+                      <Italic className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="w-[1px] h-4 bg-slate-800 mx-0.5" />
+                    <button
+                      type="button"
+                      title="Large Heading"
+                      onClick={() => applyFormatting('# ')}
+                      className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400 transition"
+                    >
+                      <Heading1 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Subheading"
+                      onClick={() => applyFormatting('### ')}
+                      className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400 transition"
+                    >
+                      <Heading2 className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="w-[1px] h-4 bg-slate-800 mx-0.5" />
+                    <button
+                      type="button"
+                      title="Bullet List"
+                      onClick={() => applyFormatting('- ')}
+                      className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400 transition"
+                    >
+                      <List className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Blockquote"
+                      onClick={() => applyFormatting('> ')}
+                      className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400 transition"
+                    >
+                      <Quote className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Code Block"
+                      onClick={() => applyFormatting('```\n', '\n```')}
+                      className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400 transition"
+                    >
+                      <Code className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
                 <textarea
+                  id="article-content-textarea"
                   rows={14}
-                  placeholder="Paste or type your article here. Paragraph breaks, spacing, and formatting will be naturally preserved..."
+                  placeholder="Type or paste your article content here freely..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl text-sm font-sans text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60 leading-relaxed whitespace-pre-wrap"
@@ -392,20 +517,22 @@ export function PostEditor() {
             <div className="space-y-3 pt-2">
               <button
                 type="button"
+                disabled={isSaving}
                 onClick={() => handleSavePost('published')}
-                className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow transition"
+                className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow transition"
               >
-                <Send className="w-4 h-4" />
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 <span>{editingPostId ? 'Save & Publish Post' : 'Publish Article Now'}</span>
               </button>
 
               <button
                 type="button"
+                disabled={isSaving}
                 onClick={() => handleSavePost('draft')}
-                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700/80 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition"
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-emerald-400 border border-slate-700/80 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition"
               >
-                <Clock className="w-4 h-4" />
-                <span>{editingPostId ? 'Save as Draft' : 'Save as Draft'}</span>
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
+                <span>Save as Draft</span>
               </button>
 
               <button
@@ -423,3 +550,4 @@ export function PostEditor() {
     </div>
   )
 }
+

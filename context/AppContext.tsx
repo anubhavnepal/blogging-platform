@@ -38,7 +38,7 @@ interface AppContextType {
   applyForAuthorStatus: (pitch: string) => void
   
   // Post Actions
-  addPost: (post: Omit<BlogPost, 'id' | 'createdAt' | 'viewsCount' | 'likesCount'>) => BlogPost
+  addPost: (post: Omit<BlogPost, 'id' | 'createdAt' | 'viewsCount' | 'likesCount'>) => Promise<BlogPost | null>
   updatePost: (id: string, updatedFields: Partial<BlogPost>) => void
   deletePost: (id: string) => void
   toggleLikePost: (id: string) => void
@@ -540,20 +540,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Create & Edit Posts
-  const addPost = (postData: Omit<BlogPost, 'id' | 'createdAt' | 'viewsCount' | 'likesCount'>) => {
-    const newPost: BlogPost = {
-      ...postData,
-      id: `post-${Date.now()}`,
-      viewsCount: 1,
-      likesCount: 0,
-      createdAt: new Date().toISOString()
-    }
-    setPosts(prev => [newPost, ...prev])
-
-    // Async push to Supabase
-    import('@/lib/supabase/client').then(({ createClient }) => {
+  const addPost = async (postData: Omit<BlogPost, 'id' | 'createdAt' | 'viewsCount' | 'likesCount'>): Promise<BlogPost | null> => {
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
-      supabase.from('posts').insert({
+
+      const { data, error } = await supabase.from('posts').insert({
         title: postData.title,
         slug: postData.slug,
         excerpt: postData.excerpt,
@@ -565,18 +557,84 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         is_published: postData.isPublished,
         read_time: postData.readTime,
         status: postData.status
-      })
-    })
+      }).select('*, profiles(*)').single()
 
-    return newPost
+      if (error) {
+        console.error('Supabase insert error:', error)
+        // Fallback optimistic post
+        const fallbackPost: BlogPost = {
+          ...postData,
+          id: `post-${Date.now()}`,
+          viewsCount: 1,
+          likesCount: 0,
+          createdAt: new Date().toISOString()
+        }
+        setPosts(prev => [fallbackPost, ...prev])
+        return fallbackPost
+      }
+
+      if (data) {
+        const author = data.profiles
+        const createdPost: BlogPost = {
+          id: data.id,
+          title: data.title,
+          slug: data.slug,
+          excerpt: data.excerpt,
+          content: data.content,
+          coverImage: data.cover_image,
+          category: data.category,
+          tags: data.tags || [],
+          authorId: data.author_id,
+          authorName: author?.full_name || postData.authorName,
+          authorAvatar: author?.avatar_url || postData.authorAvatar,
+          authorUsername: author?.username || postData.authorUsername,
+          isPublished: data.is_published,
+          readTime: data.read_time,
+          viewsCount: data.views_count || 0,
+          likesCount: data.likes_count || 0,
+          status: data.status,
+          createdAt: data.created_at
+        }
+        setPosts(prev => [createdPost, ...prev.filter(p => p.id !== createdPost.id)])
+        return createdPost
+      }
+    } catch (e) {
+      console.error('Post creation exception:', e)
+    }
+    return null
   }
 
-  const updatePost = (id: string, updatedFields: Partial<BlogPost>) => {
+  const updatePost = async (id: string, updatedFields: Partial<BlogPost>) => {
     setPosts(prev => prev.map(p => p.id === id ? { ...p, ...updatedFields } : p))
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const dbUpdates: any = {}
+      if (updatedFields.title !== undefined) dbUpdates.title = updatedFields.title
+      if (updatedFields.excerpt !== undefined) dbUpdates.excerpt = updatedFields.excerpt
+      if (updatedFields.content !== undefined) dbUpdates.content = updatedFields.content
+      if (updatedFields.category !== undefined) dbUpdates.category = updatedFields.category
+      if (updatedFields.tags !== undefined) dbUpdates.tags = updatedFields.tags
+      if (updatedFields.coverImage !== undefined) dbUpdates.cover_image = updatedFields.coverImage
+      if (updatedFields.isPublished !== undefined) dbUpdates.is_published = updatedFields.isPublished
+      if (updatedFields.status !== undefined) dbUpdates.status = updatedFields.status
+
+      await supabase.from('posts').update(dbUpdates).eq('id', id)
+    } catch (e) {
+      console.error('Post update error:', e)
+    }
   }
 
-  const deletePost = (id: string) => {
+  const deletePost = async (id: string) => {
     setPosts(prev => prev.filter(p => p.id !== id))
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      await supabase.from('posts').delete().eq('id', id)
+    } catch (e) {
+      console.error('Post delete error:', e)
+    }
   }
 
   // Toggle Like with Realtime Broadcast & Database Sync

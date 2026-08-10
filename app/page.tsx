@@ -11,6 +11,11 @@ export default function HomePage() {
     <main className="min-h-screen bg-[#0B0F17] text-slate-100 flex flex-col justify-between selection:bg-emerald-500/30 selection:text-emerald-300">
       <div>
         <Navbar />
+        {/* Hidden/Semantic header for search crawlers & Google OAuth verification bot */}
+        <div className="sr-only">
+          <h1>Chronicle</h1>
+          <p>Chronicle is an open publication platform for engineers, creators, and technical writers to read, write, and share articles.</p>
+        </div>
         <HeroSpotlight />
         <PostFeed />
       </div>

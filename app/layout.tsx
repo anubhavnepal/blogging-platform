@@ -5,7 +5,10 @@ import { AuthorApplicationModal } from '@/components/auth/AuthorApplicationModal
 
 export const metadata: Metadata = {
   title: 'Chronicle — Modern Multi-Author Publication Platform',
-  description: 'A sleek, high-craft developer publishing platform built with Next.js 16 and Supabase.',
+  description: 'Chronicle is an open digital publishing and blogging platform built for software engineers, designers, and technical creators.',
+  verification: {
+    google: 'FvcKBOYw2eTGOkxdA8PApmI1MeJBGf-4AVOtjHu7Tek',
+  },
 }
 
 export default function RootLayout({

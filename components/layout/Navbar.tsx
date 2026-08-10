@@ -38,10 +38,10 @@ export function Navbar() {
           </div>
           <div className="flex flex-col">
             <span className="text-lg font-bold text-white tracking-tight group-hover:text-emerald-400 transition">
-              {siteConfig.siteName}
+              Chronicle
             </span>
             <span className="text-[10px] text-slate-400 font-mono -mt-1 hidden sm:inline-block">
-              PUBLICATIONS
+              PUBLICATION PLATFORM
             </span>
           </div>
         </Link>

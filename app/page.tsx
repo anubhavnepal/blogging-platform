@@ -22,12 +22,12 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 rounded-md gradient-accent flex items-center justify-center text-slate-950 font-bold text-xs">C</div>
-            <span className="font-bold text-slate-300">Chronicle Publication Systems</span>
+            <span className="font-bold text-slate-300">Chronicle Publication Platform</span>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
             <a href="/privacy" className="hover:text-emerald-400 transition-colors font-medium">Privacy Policy</a>
             <span>•</span>
-            <p>© 2026 Chronicle. Built with Next.js 16, Supabase, and Tailwind CSS.</p>
+            <p>© {new Date().getFullYear()} Chronicle. All rights reserved.</p>
           </div>
         </div>
       </footer>

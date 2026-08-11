@@ -194,7 +194,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               // Ignore single query error if profile doesn't exist yet
             }
 
-            // Ensure user profile exists in public.profiles table (Foreign Key constraint safeguard)
+            // Ensure user profile exists in public.profiles table without overwriting DB roles
             try {
               await supabase.from('profiles').upsert({
                 id: user.id,
@@ -202,10 +202,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 full_name: googleName,
                 username: googleUsername,
                 avatar_url: googleAvatar,
-                role: assignedRole,
-                verification_status: currentStatus,
                 bio: 'Authenticated User.'
-              }, { onConflict: 'id' })
+              }, { onConflict: 'id', ignoreDuplicates: false })
 
               // Fetch persisted bookmarks and likes from Supabase safely
               let userBookmarks: string[] = []

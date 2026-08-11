@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import ReactMarkdown from 'react-markdown'
 import { useApp } from '@/context/AppContext'
 import { AuthorDashboard } from './AuthorDashboard'
+import { RichTextEditor } from './RichTextEditor'
 import { 
   ShieldAlert, 
   Clock, 
@@ -13,27 +13,12 @@ import {
   Eye, 
   PenSquare, 
   Image as ImageIcon, 
-  Tag, 
-  UserCheck, 
-  CheckCircle2,
-  Bold,
-  Italic,
-  Heading1,
-  Heading2,
-  List,
-  Quote,
-  Code,
-  Link as LinkIcon,
+  Upload,
+  X,
   Loader2
 } from 'lucide-react'
 
-const COVER_PRESETS = [
-  'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=1200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1200&auto=format&fit=crop&q=80'
-]
-
+const DEFAULT_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80'
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5 MB Limit
 
 export function PostEditor() {
@@ -54,7 +39,7 @@ export function PostEditor() {
   const [content, setContent] = useState('')
   const [category, setCategory] = useState('Engineering')
   const [tagsInput, setTagsInput] = useState('Engineering, Tech')
-  const [coverImage, setCoverImage] = useState(COVER_PRESETS[0])
+  const [coverImage, setCoverImage] = useState('')
 
   // Determine current active sub-mode
   const isEditing = Boolean(editId || action === 'new')
@@ -65,12 +50,12 @@ export function PostEditor() {
     if (editId) {
       const existing = posts.find(p => p.id === editId)
       if (existing) {
-        setTitle(existing.title)
-        setExcerpt(existing.excerpt)
-        setContent(existing.content)
-        setCategory(existing.category)
-        setTagsInput(existing.tags.join(', '))
-        setCoverImage(existing.coverImage)
+        setTitle(existing.title || '')
+        setExcerpt(existing.excerpt || '')
+        setContent(existing.content || '')
+        setCategory(existing.category || 'Engineering')
+        setTagsInput((existing.tags || []).join(', '))
+        setCoverImage(existing.coverImage || '')
         setEditingPostId(editId)
       }
     } else if (action === 'new') {
@@ -79,10 +64,10 @@ export function PostEditor() {
       setContent('')
       setCategory('Engineering')
       setTagsInput('Engineering, Tech')
-      setCoverImage(COVER_PRESETS[0])
+      setCoverImage('')
       setEditingPostId(null)
     }
-  }, [editId, action, posts])
+  }, [editId, action])
 
   // ==================== ADMIN VERIFICATION GATE CHECK ====================
   if (!currentUser) {
@@ -147,14 +132,18 @@ export function PostEditor() {
   // ==================== END VERIFICATION GATE CHECK ====================
 
   const handleSavePost = async (publishStatus: 'published' | 'draft') => {
-    if (!title.trim() || !content.trim()) {
+    const safeTitle = (title || '').trim()
+    const safeContent = content || ''
+    const rawText = safeContent.replace(/<[^>]*>?/gm, '').trim()
+    if (!safeTitle || !rawText) {
       alert('Please provide an article title and body content.')
       return
     }
 
     setIsSaving(true)
-    const tagsArray = tagsInput.split(',').map(t => t.trim()).filter(Boolean)
+    const tagsArray = (tagsInput || '').split(',').map(t => t.trim()).filter(Boolean)
     const isPub = publishStatus === 'published'
+    const finalCoverImage = coverImage || DEFAULT_FALLBACK_IMAGE
 
     try {
       if (editingPostId) {
@@ -164,7 +153,7 @@ export function PostEditor() {
           content,
           category,
           tags: tagsArray,
-          coverImage,
+          coverImage: finalCoverImage,
           isPublished: isPub,
           status: publishStatus
         })
@@ -174,7 +163,7 @@ export function PostEditor() {
           slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
           excerpt: excerpt || title,
           content,
-          coverImage,
+          coverImage: finalCoverImage,
           category,
           tags: tagsArray,
           authorId: currentUser.id,
@@ -182,7 +171,7 @@ export function PostEditor() {
           authorAvatar: currentUser.avatarUrl,
           authorUsername: currentUser.username,
           isPublished: isPub,
-          readTime: `${Math.max(2, Math.ceil(content.split(/\s+/).length / 150))} min read`,
+          readTime: `${Math.max(2, Math.ceil(rawText.split(/\s+/).length / 150))} min read`,
           status: publishStatus
         })
       }
@@ -220,25 +209,6 @@ export function PostEditor() {
       }
     }
     reader.readAsDataURL(file)
-  }
-
-  // Formatting Toolbar Helper for Content Area
-  const applyFormatting = (prefix: string, suffix: string = '') => {
-    const textarea = document.getElementById('article-content-textarea') as HTMLTextAreaElement
-    if (!textarea) return
-
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const selectedText = content.substring(start, end)
-    const replacement = `${prefix}${selectedText || 'text'}${suffix}`
-
-    const newContent = content.substring(0, start) + replacement + content.substring(end)
-    setContent(newContent)
-
-    setTimeout(() => {
-      textarea.focus()
-      textarea.setSelectionRange(start + prefix.length, end + prefix.length + (selectedText ? 0 : 4))
-    }, 0)
   }
 
   // When NOT editing, render standard AuthorDashboard with top Author Studio header
@@ -282,17 +252,18 @@ export function PostEditor() {
               <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
                 <span className="text-xs font-mono text-emerald-400 uppercase tracking-widest font-bold">Article Preview</span>
               </div>
-              <div className="h-[240px] w-full rounded-xl overflow-hidden relative">
-                <img src={coverImage} alt="Cover" className="w-full h-full object-cover" />
+              <div className="h-[260px] w-full rounded-xl overflow-hidden relative bg-slate-900 border border-slate-800">
+                <img src={coverImage || DEFAULT_FALLBACK_IMAGE} alt="Cover" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
                 <div className="absolute bottom-4 left-6 right-6">
                   <span className="px-2.5 py-1 text-[10px] font-bold bg-emerald-500 text-slate-950 rounded-md uppercase tracking-wider">{category}</span>
                   <h2 className="text-2xl font-extrabold text-white mt-2">{title || 'Untitled Article'}</h2>
                 </div>
               </div>
-              <div className="prose prose-invert prose-emerald max-w-none whitespace-pre-wrap font-sans text-slate-200 leading-relaxed">
-                {content || <em className="text-slate-500">No content entered yet...</em>}
-              </div>
+              <div 
+                className="prose prose-invert prose-emerald max-w-none font-sans text-slate-200 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: content || '<em class="text-slate-500">No content entered yet...</em>' }}
+              />
             </div>
           ) : (
             <div className="space-y-6 glass-card p-6 sm:p-8 rounded-2xl border border-slate-800/80">
@@ -346,13 +317,13 @@ export function PostEditor() {
                 />
               </div>
 
-              {/* Featured Image & Upload */}
+              {/* Clean Featured Image File Uploader (No Presets, No Raw URLs) */}
               <div className="space-y-3">
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <ImageIcon className="w-4 h-4 text-emerald-400" /> Featured Image
+                    <ImageIcon className="w-4 h-4 text-emerald-400" /> Featured Article Image
                   </span>
-                  <span className="text-[11px] text-slate-500 font-normal">Select preset or upload custom (Max 5MB)</span>
+                  <span className="text-[11px] text-slate-500 font-normal">Formats: PNG, JPG, WEBP (Max 5MB)</span>
                 </label>
 
                 {uploadError && (
@@ -361,114 +332,46 @@ export function PostEditor() {
                   </div>
                 )}
 
-                {/* Upload or Image URL bar */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="text"
-                    placeholder="Paste Image URL (https://...)"
-                    value={coverImage}
-                    onChange={(e) => setCoverImage(e.target.value)}
-                    className="flex-1 p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60"
-                  />
-                  <label className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-semibold text-slate-300 hover:text-white cursor-pointer transition flex items-center justify-center gap-2 shrink-0">
-                    <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Upload Picture</span>
+                {coverImage ? (
+                  <div className="relative rounded-2xl overflow-hidden border border-slate-800 group h-56 bg-slate-950">
+                    <img src={coverImage} alt="Cover Preview" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-3">
+                      <label className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold rounded-xl cursor-pointer transition flex items-center gap-1.5">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Change Photo</span>
+                        <input type="file" accept="image/*" onChange={handleImageFileUpload} className="hidden" />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setCoverImage('')}
+                        className="px-4 py-2 bg-rose-500/80 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>Remove Photo</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-800 hover:border-emerald-500/50 rounded-2xl bg-slate-950/60 hover:bg-slate-950 transition cursor-pointer group text-center space-y-2">
+                    <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-emerald-400 group-hover:scale-105 transition">
+                      <Upload className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-200 group-hover:text-white">Click to upload custom article cover photo</p>
+                      <p className="text-[11px] text-slate-500">Supports PNG, JPG, WEBP up to 5 MB</p>
+                    </div>
                     <input type="file" accept="image/*" onChange={handleImageFileUpload} className="hidden" />
                   </label>
-                </div>
-
-                {/* Presets Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-                  {COVER_PRESETS.map((presetUrl, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setCoverImage(presetUrl)}
-                      className={`relative h-20 rounded-xl overflow-hidden border-2 transition ${
-                        coverImage === presetUrl ? 'border-emerald-400 ring-2 ring-emerald-500/40' : 'border-slate-800 opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={presetUrl} alt="Preset" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
+                )}
               </div>
 
-              {/* Article Body Content with Formatting Toolbar */}
+              {/* True WYSIWYG MS Word Style Rich Text Editor */}
               <div>
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Article Body Content</label>
-                  
-                  {/* Quick Formatting Toolbar */}
-                  <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg p-1 text-slate-300">
-                    <button
-                      type="button"
-                      title="Bold"
-                      onClick={() => applyFormatting('**', '**')}
-                      className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400 transition"
-                    >
-                      <Bold className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      title="Italic"
-                      onClick={() => applyFormatting('*', '*')}
-                      className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400 transition"
-                    >
-                      <Italic className="w-3.5 h-3.5" />
-                    </button>
-                    <div className="w-[1px] h-4 bg-slate-800 mx-0.5" />
-                    <button
-                      type="button"
-                      title="Large Heading"
-                      onClick={() => applyFormatting('# ')}
-                      className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400 transition"
-                    >
-                      <Heading1 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      title="Subheading"
-                      onClick={() => applyFormatting('### ')}
-                      className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400 transition"
-                    >
-                      <Heading2 className="w-3.5 h-3.5" />
-                    </button>
-                    <div className="w-[1px] h-4 bg-slate-800 mx-0.5" />
-                    <button
-                      type="button"
-                      title="Bullet List"
-                      onClick={() => applyFormatting('- ')}
-                      className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400 transition"
-                    >
-                      <List className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      title="Blockquote"
-                      onClick={() => applyFormatting('> ')}
-                      className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400 transition"
-                    >
-                      <Quote className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      title="Code Block"
-                      onClick={() => applyFormatting('```\n', '\n```')}
-                      className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-emerald-400 transition"
-                    >
-                      <Code className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                <textarea
-                  id="article-content-textarea"
-                  rows={14}
-                  placeholder="Type or paste your article content here freely..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl text-sm font-sans text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500/60 leading-relaxed whitespace-pre-wrap"
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Article Body Content</label>
+                <RichTextEditor
+                  content={content}
+                  onChange={setContent}
+                  placeholder="Type or paste your article content freely..."
                 />
               </div>
             </div>

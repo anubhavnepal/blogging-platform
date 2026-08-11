@@ -165,9 +165,14 @@ export function PostReader({ postId }: { postId: string }) {
       </div>
 
       {/* Body Content */}
-      <div className="prose prose-invert max-w-none whitespace-pre-wrap font-sans text-slate-200 text-base leading-relaxed">
-        {post.content}
-      </div>
+      <div 
+        className="prose prose-invert prose-emerald max-w-none font-sans text-slate-200 text-base leading-relaxed"
+        dangerouslySetInnerHTML={{ 
+          __html: post.content.startsWith('<') 
+            ? post.content 
+            : post.content.replace(/\n/g, '<br />') 
+        }}
+      />
 
       {/* Article Tags */}
       <div className="flex flex-wrap gap-2 pt-6 border-t border-slate-800">

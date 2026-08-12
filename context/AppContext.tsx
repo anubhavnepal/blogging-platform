@@ -202,6 +202,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 full_name: googleName,
                 username: googleUsername,
                 avatar_url: googleAvatar,
+                role: assignedRole,
+                verification_status: currentStatus,
                 bio: 'Authenticated User.'
               }, { onConflict: 'id', ignoreDuplicates: false })
 

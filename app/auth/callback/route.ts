@@ -41,15 +41,22 @@ export async function GET(request: Request) {
       const fullName = userMetadata.full_name || userMetadata.name || user.email?.split('@')[0] || 'Subscriber'
       const username = userMetadata.preferred_username || user.email?.split('@')[0] || `user_${user.id.slice(0, 8)}`
 
-      // Upsert profile record
+      // Check if profile exists first to preserve assigned role and status
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('role, verification_status')
+        .eq('id', user.id)
+        .single()
+
+      // Upsert profile record while preserving role and verification status
       await supabase.from('profiles').upsert({
         id: user.id,
         email: user.email || '',
         full_name: fullName,
         username,
         avatar_url: avatarUrl,
-        role: 'reader',
-        verification_status: 'none',
+        role: existingProfile?.role || 'reader',
+        verification_status: existingProfile?.verification_status || 'none',
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' })
 

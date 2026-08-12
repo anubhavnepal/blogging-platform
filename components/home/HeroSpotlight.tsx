@@ -18,7 +18,9 @@ export function HeroSpotlight() {
     )
   }
 
-  const publishedPosts = posts.filter(p => p.isPublished)
+  const publishedPosts = posts
+    .filter(p => p.isPublished)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   const featuredPost = publishedPosts.find(p => p.isFeatured) || publishedPosts[0]
 
   if (!featuredPost) return null

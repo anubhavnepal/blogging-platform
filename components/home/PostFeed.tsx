@@ -19,8 +19,10 @@ export function PostFeed() {
     )
   }
 
-  // Filter posts based on category & search query
-  const publishedPosts = posts.filter(post => post.isPublished && post.status !== 'flagged')
+  // Filter & sort posts based on category & search query (Newest first)
+  const publishedPosts = posts
+    .filter(post => post.isPublished && post.status !== 'flagged')
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   const filteredPosts = publishedPosts.filter(post => {
     const matchesCategory = activeCategory === 'All' || post.category === activeCategory

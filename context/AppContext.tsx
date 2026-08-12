@@ -97,7 +97,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setAllUsers(mappedProfiles)
           }
 
-          const { data: dbPosts } = await supabase.from('posts').select('*, profiles(*)')
+          const { data: dbPosts } = await supabase.from('posts').select('*, profiles(*)').order('created_at', { ascending: false })
           if (dbPosts && dbPosts.length > 0) {
             const mappedPosts: BlogPost[] = dbPosts.map((p: any) => {
               const author = p.profiles || profilesMap[p.author_id]

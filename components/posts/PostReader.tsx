@@ -65,180 +65,201 @@ export function PostReader({ postId }: { postId: string }) {
   }
 
   return (
-    <article className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-10">
-      {/* Back Link */}
-      <Link
-        href="/"
-        className="inline-flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-white transition group"
-      >
-        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-        <span>Back to Articles</span>
-      </Link>
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 relative">
+      <div className="flex flex-col md:flex-row gap-6 items-start">
+        {/* Left Sticky Vertical Action Sidebar */}
+        <aside className="fixed left-4 bottom-6 md:sticky md:top-24 z-30 flex md:flex-col items-center gap-3 p-2 bg-[#121824]/90 backdrop-blur-md border border-slate-800/80 rounded-2xl shadow-xl">
+          <Link
+            href="/"
+            className="p-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition"
+            title="Back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
 
-      {/* Header Info */}
-      <header className="space-y-6">
-        <div className="flex items-center gap-3">
-          <span className="px-3 py-1 text-xs font-semibold rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-            {post.category}
-          </span>
-          <span className="text-xs text-slate-400 font-mono flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5 text-emerald-400" />
-            {post.readTime}
-          </span>
-          <span className="text-xs text-slate-500">&bull;</span>
-          <span className="text-xs text-slate-400">{new Date(post.createdAt).toLocaleDateString()}</span>
-        </div>
+          <button
+            onClick={() => toggleLikePost(post.id)}
+            className={`relative p-3 rounded-xl transition ${
+              currentUser?.userLikes?.includes(post.id)
+                ? 'text-emerald-400 bg-emerald-500/10'
+                : 'text-slate-400 hover:text-emerald-400 hover:bg-slate-800/50'
+            }`}
+            title="Like Post"
+          >
+            <Heart className={`w-4 h-4 ${currentUser?.userLikes?.includes(post.id) ? 'fill-emerald-400' : ''}`} />
+            {post.likesCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] px-1 bg-emerald-500 text-slate-950 font-bold text-[9px] rounded-full flex items-center justify-center">
+                {post.likesCount}
+              </span>
+            )}
+          </button>
 
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
-          {post.title}
-        </h1>
+          <button
+            onClick={() => toggleBookmark(post.id)}
+            className={`p-3 rounded-xl transition ${
+              currentUser?.bookmarks?.includes(post.id)
+                ? 'text-amber-400 bg-amber-500/10'
+                : 'text-slate-400 hover:text-amber-400 hover:bg-slate-800/50'
+            }`}
+            title="Bookmark"
+          >
+            <Bookmark className={`w-4 h-4 ${currentUser?.bookmarks?.includes(post.id) ? 'fill-amber-400' : ''}`} />
+          </button>
 
-        <p className="text-lg text-slate-300/90 leading-relaxed font-normal italic border-l-2 border-emerald-500 pl-4 py-1">
-          {post.excerpt}
-        </p>
+          <button
+            onClick={copyShareLink}
+            className="p-3 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition"
+            title="Share"
+          >
+            {isCopied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
+          </button>
 
-        {/* Author Bio Row */}
-        <div className="flex items-center justify-between py-4 border-y border-slate-800/80">
-          <div className="flex items-center gap-3">
-            <img
-              src={post.authorAvatar}
-              alt={post.authorName}
-              className="w-11 h-11 rounded-full object-cover border border-slate-700"
-            />
-            <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-1">
+          <button
+            onClick={() => setIsReportModalOpen(true)}
+            className="p-3 text-slate-400 hover:text-rose-400 hover:bg-slate-800/50 rounded-xl transition"
+            title="Report"
+          >
+            <Flag className="w-4 h-4" />
+          </button>
+        </aside>
+
+        {/* Main Content Area */}
+        <main className="flex-1 space-y-6 w-full">
+          {/* Top Meta & Author Row */}
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+            {/* Left: Category & Read Stats */}
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 text-[11px] font-semibold rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-500/30">
+                {post.category}
+              </span>
+              <span className="px-3 py-1 text-[11px] text-slate-400 bg-[#121824] border border-slate-800/80 rounded-full flex items-center gap-1.5">
+                <Clock className="w-3 h-3 text-slate-400" />
+                {post.readTime}
+              </span>
+              <span className="px-3 py-1 text-[11px] text-slate-400 bg-[#121824] border border-slate-800/80 rounded-full">
+                {new Date(post.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+            </div>
+
+            {/* Right: Author Badge (Clean, frameless inline style) */}
+            <div className="flex items-center gap-2 text-xs">
+              <img
+                src={post.authorAvatar}
+                alt={post.authorName}
+                className="w-5 h-5 rounded-full object-cover ring-1 ring-emerald-500/40"
+              />
+              <span className="font-semibold text-slate-200 flex items-center gap-1">
                 {post.authorName}
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              </h3>
-              <p className="text-xs text-slate-400">@{post.authorUsername}</p>
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              </span>
+              <span className="text-slate-600 font-sans">•</span>
+              <span className="text-slate-400 font-mono text-[11px]">@{post.authorUsername}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => toggleBookmark(post.id)}
-              className={`p-2 rounded-xl border transition ${
-                currentUser?.bookmarks?.includes(post.id)
-                  ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
-                  : 'bg-slate-900 border-slate-800 hover:border-emerald-500/40 text-slate-400 hover:text-emerald-400'
-              }`}
-              title={currentUser?.bookmarks?.includes(post.id) ? 'Remove Bookmark' : 'Bookmark Article'}
-            >
-              <Bookmark className={`w-4 h-4 ${currentUser?.bookmarks?.includes(post.id) ? 'fill-emerald-400' : ''}`} />
-            </button>
+          {/* Unified Article Card Container (Title, Cover Image & Content inside one card) */}
+          <article className="p-6 sm:p-10 bg-[#0b0f17] border border-slate-800/80 rounded-2xl space-y-8">
+            {/* Title Section */}
+            <header>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white leading-tight">
+                {post.title}
+              </h1>
+            </header>
 
-            <button
-              onClick={() => toggleLikePost(post.id)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border transition text-xs font-semibold ${
-                currentUser?.userLikes?.includes(post.id)
-                  ? 'bg-rose-500/20 border-rose-500/40 text-rose-300'
-                  : 'bg-slate-900 border-slate-800 hover:border-rose-500/40 text-slate-300 hover:text-rose-400'
-              }`}
-              title={currentUser?.userLikes?.includes(post.id) ? 'Unlike Post' : 'Like Post'}
-            >
-              <Heart className={`w-4 h-4 ${currentUser?.userLikes?.includes(post.id) ? 'fill-rose-500 text-rose-500' : 'text-slate-400'}`} />
-              <span>{post.likesCount}</span>
-            </button>
-
-            <button
-              onClick={copyShareLink}
-              className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white transition"
-              title="Share Article"
-            >
-              {isCopied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
-            </button>
-
-            <button
-              onClick={() => setIsReportModalOpen(true)}
-              className="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-red-500/40 text-slate-400 hover:text-red-400 transition"
-              title="Report Inappropriate Content"
-            >
-              <Flag className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Cover Image */}
-      <div className="relative h-64 sm:h-96 w-full rounded-2xl overflow-hidden border border-slate-800">
-        <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover" />
-      </div>
-
-      {/* Body Content */}
-      <div 
-        className="prose prose-invert prose-emerald max-w-none font-sans text-slate-200 text-base leading-relaxed"
-        dangerouslySetInnerHTML={{ 
-          __html: post.content.startsWith('<') 
-            ? post.content 
-            : post.content.replace(/\n/g, '<br />') 
-        }}
-      />
-
-      {/* Article Tags */}
-      <div className="flex flex-wrap gap-2 pt-6 border-t border-slate-800">
-        {post.tags.map(tag => (
-          <span key={tag} className="px-3 py-1 text-xs font-mono text-slate-300 bg-slate-900 rounded-lg border border-slate-800">
-            #{tag}
-          </span>
-        ))}
-      </div>
-
-      {/* Comments Section */}
-      <section className="pt-10 border-t border-slate-800/80 space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-emerald-400" />
-            Discussion ({postComments.length})
-          </h2>
-        </div>
-
-        {/* Comment Form */}
-        {currentUser ? (
-          <form onSubmit={handleCommentSubmit} className="space-y-3">
-            <textarea
-              rows={3}
-              placeholder="Add your thoughts or questions on this article..."
-              value={commentInput}
-              onChange={(e) => setCommentInput(e.target.value)}
-              className="w-full p-4 text-sm bg-slate-900/90 border border-slate-800 rounded-2xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/60"
-            />
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-2 transition"
-              >
-                <span>Post Comment</span>
-                <Send className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl text-center text-sm text-slate-400">
-            Please sign in to leave a comment on this publication.
-          </div>
-        )}
-
-        {/* Comment List */}
-        <div className="space-y-4">
-          {postComments.map(c => (
-            <div key={c.id} className="p-4 bg-slate-900/40 border border-slate-800/60 rounded-xl space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <img src={c.authorAvatar} alt={c.authorName} className="w-7 h-7 rounded-full object-cover" />
-                  <span className="text-xs font-bold text-white">{c.authorName}</span>
-                </div>
-                <span className="text-[11px] text-slate-500">{new Date(c.createdAt).toLocaleDateString()}</span>
+            {/* Full-width Feature Cover Image (if available) */}
+            {post.coverImage && (
+              <div className="relative h-64 sm:h-96 w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-950/50">
+                <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover" />
               </div>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed pl-9">{c.content}</p>
+            )}
+
+            {/* Body Content */}
+            <div 
+              className="prose prose-invert prose-emerald max-w-none text-slate-300 text-sm sm:text-base leading-relaxed"
+              dangerouslySetInnerHTML={{ 
+                __html: (post.content || '').startsWith('<') 
+                  ? (post.content || '') 
+                  : (post.content || '').replace(/\n/g, '<br />') 
+              }}
+            />
+
+            {/* Article Tags */}
+            {post.tags && post.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-6 border-t border-slate-800/60">
+                {post.tags.map(tag => (
+                  <span key={tag} className="px-3 py-1 text-xs font-mono text-slate-400 bg-slate-900 rounded-lg border border-slate-800">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </article>
+
+          {/* Discussion Card Section */}
+          <section className="p-6 sm:p-8 bg-[#0b0f17] border border-slate-800/80 rounded-2xl space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-emerald-400" />
+                Discussion
+                <span className="px-2 py-0.5 text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-500/30 rounded-full">
+                  {postComments.length}
+                </span>
+              </h2>
             </div>
-          ))}
-        </div>
-      </section>
+
+            {/* Comment Input */}
+            {currentUser ? (
+              <form onSubmit={handleCommentSubmit} className="space-y-4">
+                <div className="relative">
+                  <textarea
+                    rows={4}
+                    placeholder="Add your thoughts or questions on this article..."
+                    value={commentInput}
+                    onChange={(e) => setCommentInput(e.target.value)}
+                    className="w-full p-4 text-xs sm:text-sm bg-[#070a0f] border border-slate-800/80 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 transition"
+                  />
+                </div>
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-2 transition shadow-lg shadow-emerald-500/20"
+                  >
+                    <span>Post Comment</span>
+                    <Send className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="p-4 bg-[#070a0f] border border-slate-800/80 rounded-xl text-center text-xs text-slate-400">
+                Please sign in to leave a comment on this publication.
+              </div>
+            )}
+
+            {/* Existing Comments List */}
+            {postComments.length > 0 && (
+              <div className="space-y-3 pt-4 border-t border-slate-800/60">
+                {postComments.map(c => (
+                  <div key={c.id} className="p-4 bg-[#070a0f] border border-slate-800/60 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <img src={c.authorAvatar} alt={c.authorName} className="w-6 h-6 rounded-full object-cover" />
+                        <span className="text-xs font-bold text-white">{c.authorName}</span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">{new Date(c.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed pl-8">{c.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </main>
+      </div>
 
       {/* Report Modal */}
       {isReportModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-          <div className="relative w-full max-w-md p-6 glass-panel rounded-2xl border border-slate-800 space-y-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="relative w-full max-w-md p-6 bg-[#0b0f17] rounded-2xl border border-slate-800 space-y-5">
             <button
               onClick={() => setIsReportModalOpen(false)}
               className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white"
@@ -246,7 +267,7 @@ export function PostReader({ postId }: { postId: string }) {
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="text-xl font-bold text-white">Report Inappropriate Content</h3>
+            <h3 className="text-lg font-bold text-white">Report Inappropriate Content</h3>
 
             <form onSubmit={handleReportSubmit} className="space-y-4">
               <div>
@@ -254,7 +275,7 @@ export function PostReader({ postId }: { postId: string }) {
                 <select
                   value={reportReason}
                   onChange={(e: any) => setReportReason(e.target.value)}
-                  className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white"
+                  className="w-full p-2.5 bg-[#070a0f] border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500/50"
                 >
                   <option value="offensive">Offensive / Hate Speech / Harassment</option>
                   <option value="spam">Spam / Unsolicited Promotion</option>
@@ -270,7 +291,7 @@ export function PostReader({ postId }: { postId: string }) {
                   placeholder="Provide context for admin review..."
                   value={reportDetails}
                   onChange={(e) => setReportDetails(e.target.value)}
-                  className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white"
+                  className="w-full p-3 bg-[#070a0f] border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500/50"
                 />
               </div>
 
@@ -293,6 +314,6 @@ export function PostReader({ postId }: { postId: string }) {
           </div>
         </div>
       )}
-    </article>
+    </div>
   )
 }

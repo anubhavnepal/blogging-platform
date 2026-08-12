@@ -25,7 +25,6 @@ export function Navbar() {
       {/* Announcement Banner */}
       {siteConfig.announcementBanner && (
         <div className="bg-slate-900 border-b border-slate-800 py-1.5 px-4 text-center text-xs text-emerald-400 font-medium flex items-center justify-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
           <span>{siteConfig.announcementBanner}</span>
         </div>
       )}

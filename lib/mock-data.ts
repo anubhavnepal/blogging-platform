@@ -147,7 +147,7 @@ export const MOCK_POSTS: BlogPost[] = [
     id: '11111111-1111-4111-a111-111111111111',
     title: 'Architecting Distributed Real-time Applications with Next.js 16 and Supabase',
     slug: 'architecting-distributed-realtime-apps-nextjs16-supabase',
-    excerpt: 'Deep dive into server actions, edge database caching, and row-level security policy design for high-scale enterprise apps.',
+    excerpt: 'Building scalable web applications in modern software engineering demands a zero-compromise approach to database security, real-time synchronization, and edge execution performance. Explore server actions, edge database caching, and row-level security policy design for high-scale enterprise applications.',
     content: `Building scalable web applications in 2026 demands a zero-compromise approach to database security, real-time sync, and edge execution performance.
 
 ## The Shift to Edge & Row-Level Security
@@ -194,7 +194,7 @@ By unifying these patterns, your publishing platform maintains sub-50ms response
     id: '22222222-2222-4222-a222-222222222222',
     title: 'The Psychology of Micro-Interactions in Dark Theme Interfaces',
     slug: 'psychology-of-micro-interactions-dark-theme-interfaces',
-    excerpt: 'How modern glassmorphism, subtle light washes, and kinetic visual feedback keep users engaged without visual fatigue.',
+    excerpt: 'In modern software design, dark mode has evolved far beyond a simple aesthetic preference—it is a low-luminance sensory environment where user focus and visual fatigue dictate interaction patterns. Discover how kinetic visual feedback, haptic micro-animations, and subtle light washes keep users engaged.',
     content: `Dark mode is no longer just an aesthetic toggle; it is a fundamental pillar of modern visual design systems.
 
 When users navigate dark interfaces, contrast management becomes paramount. Plain black background (\`#000000\`) creates harsh visual contrast that fatigues the retina. Instead, deep slate gradients (\`#0B0F17\` to \`#111827\`) paired with muted neon accents create depth.

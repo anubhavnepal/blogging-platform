@@ -145,11 +145,24 @@ export function PostEditor() {
     const isPub = publishStatus === 'published'
     const finalCoverImage = coverImage || DEFAULT_FALLBACK_IMAGE
 
+    // Generate fallback excerpt from content if excerpt field is empty (extract first 45 clean words)
+    let finalExcerpt = (excerpt || '').trim()
+    if (!finalExcerpt) {
+      // Strip HTML tags and collapse whitespace
+      const plainContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+      if (plainContent) {
+        const words = plainContent.split(' ')
+        finalExcerpt = words.length > 45 ? words.slice(0, 45).join(' ') : plainContent
+      } else {
+        finalExcerpt = title
+      }
+    }
+
     try {
       if (editingPostId) {
         await updatePost(editingPostId, {
           title,
-          excerpt: excerpt || title,
+          excerpt: finalExcerpt,
           content,
           category,
           tags: tagsArray,
@@ -161,7 +174,7 @@ export function PostEditor() {
         await addPost({
           title,
           slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
-          excerpt: excerpt || title,
+          excerpt: finalExcerpt,
           content,
           coverImage: finalCoverImage,
           category,

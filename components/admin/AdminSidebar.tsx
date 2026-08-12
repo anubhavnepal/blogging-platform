@@ -45,9 +45,13 @@ export function AdminSidebar({
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-bold text-white text-sm block tracking-tight">
-                {siteConfig.siteName}
-              </span>
+              {siteConfig.siteName ? (
+                <span className="font-bold text-white text-sm block tracking-tight">
+                  {siteConfig.siteName}
+                </span>
+              ) : (
+                <div className="h-4 w-24 bg-slate-800 rounded animate-pulse my-1" />
+              )}
               <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider block">
                 Admin Console
               </span>

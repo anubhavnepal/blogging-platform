@@ -24,7 +24,9 @@ import {
   AlertCircle,
   CheckCircle2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react'
 
 export function AdminControlCenter() {
@@ -43,10 +45,18 @@ export function AdminControlCenter() {
 
   // Form states for Site Config
   const [siteName, setSiteName] = useState(siteConfig.siteName)
+  const [siteLogo, setSiteLogo] = useState(siteConfig.siteLogo || '')
   const [tagline, setTagline] = useState(siteConfig.tagline)
   const [announcementBanner, setAnnouncementBanner] = useState(siteConfig.announcementBanner)
-  const [autoApprove, setAutoApprove] = useState(siteConfig.autoApproveAuthors)
   const [maintenance, setMaintenance] = useState(siteConfig.maintenanceMode)
+
+  React.useEffect(() => {
+    setSiteName(siteConfig.siteName)
+    setSiteLogo(siteConfig.siteLogo || '')
+    setTagline(siteConfig.tagline)
+    setAnnouncementBanner(siteConfig.announcementBanner)
+    setMaintenance(siteConfig.maintenanceMode)
+  }, [siteConfig])
 
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | 'pending' | 'admin' | 'author' | 'reader'>('all')
@@ -158,9 +168,9 @@ export function AdminControlCenter() {
     e.preventDefault()
     updateSiteConfig({
       siteName,
+      siteLogo,
       tagline,
       announcementBanner,
-      autoApproveAuthors: autoApprove,
       maintenanceMode: maintenance
     })
     alert('Site configuration updated successfully!')
@@ -477,13 +487,86 @@ export function AdminControlCenter() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Publication Tagline</label>
+              <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Site Tagline</label>
               <input
                 type="text"
                 value={tagline}
                 onChange={(e) => setTagline(e.target.value)}
                 className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-purple-500"
               />
+            </div>
+          </div>
+
+          {/* Site Logo Uploader */}
+          <div>
+            <label className="block text-xs font-bold uppercase text-slate-400 mb-2">Site Logo</label>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-slate-950 border border-slate-800 rounded-xl">
+              {siteLogo ? (
+                <div className="relative group shrink-0">
+                  <img
+                    src={siteLogo}
+                    alt="Site Logo Preview"
+                    className="w-14 h-14 rounded-xl object-cover border border-slate-700/80 bg-slate-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setSiteLogo('')}
+                    className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full text-xs shadow transition"
+                    title="Remove Logo"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="w-14 h-14 rounded-xl bg-purple-500/10 border border-dashed border-purple-500/40 flex items-center justify-center text-purple-400 shrink-0">
+                  <ImageIcon className="w-6 h-6" />
+                </div>
+              )}
+
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-3">
+                  <label className="cursor-pointer px-4 py-2 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-bold rounded-xl flex items-center gap-2 transition active:scale-95">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{siteLogo ? 'Change Logo Image' : 'Upload Logo Image'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        if (!file.type.startsWith('image/')) {
+                          alert('Please upload a valid image file (PNG, JPG, SVG, WEBP).')
+                          return
+                        }
+                        if (file.size > 3 * 1024 * 1024) {
+                          alert('Image file size must be less than 3 MB.')
+                          return
+                        }
+                        const reader = new FileReader()
+                        reader.onloadend = () => {
+                          if (typeof reader.result === 'string') {
+                            setSiteLogo(reader.result)
+                          }
+                        }
+                        reader.readAsDataURL(file)
+                      }}
+                    />
+                  </label>
+                  {siteLogo && (
+                    <button
+                      type="button"
+                      onClick={() => setSiteLogo('')}
+                      className="text-xs text-slate-400 hover:text-red-400 transition"
+                    >
+                      Reset to default text logo
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  PNG, JPG, SVG, or WEBP (Max 3 MB). Used in top navigation and site header.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -499,19 +582,6 @@ export function AdminControlCenter() {
 
           <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-4">
             <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-sm font-bold text-white">Instant Author Access for Google Login</h4>
-                <p className="text-xs text-slate-400">When turned on, users signing in with Google can write immediately without waiting for admin approval.</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={autoApprove}
-                onChange={(e) => setAutoApprove(e.target.checked)}
-                className="w-5 h-5 accent-purple-500"
-              />
-            </div>
-
-            <div className="flex items-center justify-between border-t border-slate-800/80 pt-3">
               <div>
                 <h4 className="text-sm font-bold text-white">Site Maintenance Mode</h4>
                 <p className="text-xs text-slate-400">Temporarily pause new article publishing for non-admin users.</p>

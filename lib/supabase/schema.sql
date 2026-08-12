@@ -21,10 +21,10 @@ create table if not exists public.profiles (
 create table if not exists public.site_config (
   id integer primary key default 1 check (id = 1),
   site_name text not null default 'Chronicle',
+  site_logo text default '',
   tagline text default 'Where ideas, code, and insights converge.',
   announcement_banner text default '✨ Welcome to Chronicle — A modern publication hub for developers and creators.',
   allow_anonymous_reading boolean default true,
-  auto_approve_authors boolean default false,
   maintenance_mode boolean default false,
   featured_category text default 'All',
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null

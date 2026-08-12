@@ -32,16 +32,27 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 font-black text-lg flex items-center justify-center shadow-md group-hover:scale-105 transition">
-            C
-          </div>
+          {siteConfig.siteLogo ? (
+            <img 
+              src={siteConfig.siteLogo} 
+              alt={siteConfig.siteName} 
+              className="w-9 h-9 rounded-xl object-cover shadow-md group-hover:scale-105 transition border border-slate-800"
+            />
+          ) : siteConfig.siteName ? (
+            <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 font-black text-lg flex items-center justify-center shadow-md group-hover:scale-105 transition">
+              {siteConfig.siteName.charAt(0).toUpperCase()}
+            </div>
+          ) : (
+            <div className="w-9 h-9 rounded-xl bg-slate-800 animate-pulse" />
+          )}
           <div className="flex flex-col">
-            <span className="text-lg font-bold text-white tracking-tight group-hover:text-emerald-400 transition">
-              Chronicle
-            </span>
-            <span className="text-[10px] text-slate-400 font-mono -mt-1 hidden sm:inline-block">
-              PUBLICATION PLATFORM
-            </span>
+            {siteConfig.siteName ? (
+              <span className="text-lg font-bold text-white tracking-tight group-hover:text-emerald-400 transition">
+                {siteConfig.siteName}
+              </span>
+            ) : (
+              <div className="h-5 w-28 bg-slate-800 rounded animate-pulse my-0.5" />
+            )}
           </div>
         </Link>
 

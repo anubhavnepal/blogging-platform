@@ -62,9 +62,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [allUsers, setAllUsers] = useState<UserProfile[]>([])
   const [posts, setPosts] = useState<BlogPost[]>([])
-  const [siteConfig, setSiteConfig] = useState<SiteConfig>(MOCK_SITE_CONFIG)
+  const [siteConfig, setSiteConfig] = useState<SiteConfig>({
+    siteName: '',
+    siteLogo: '',
+    tagline: '',
+    announcementBanner: '',
+    allowAnonymousReading: true,
+    maintenanceMode: false,
+    featuredCategory: 'All'
+  })
   const [reports, setReports] = useState<ContentReport[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(true)
+
+  // Dynamically update document title in browser tab when siteName or tagline changes
+  useEffect(() => {
+    if (siteConfig.siteName) {
+      document.title = siteConfig.tagline 
+        ? `${siteConfig.siteName} — ${siteConfig.tagline}`
+        : siteConfig.siteName
+    }
+  }, [siteConfig.siteName, siteConfig.tagline])
 
   // Listen to Supabase Auth State changes & fetch real profiles table
   useEffect(() => {
@@ -139,11 +156,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }))
             setReports(mappedReports)
           }
+          const { data: dbConfig } = await supabase.from('site_config').select('*').eq('id', 1).single()
+          if (dbConfig) {
+            setSiteConfig({
+              siteName: dbConfig.site_name || 'Chronicle',
+              siteLogo: dbConfig.site_logo || '',
+              tagline: dbConfig.tagline || '',
+              announcementBanner: dbConfig.announcement_banner || '',
+              allowAnonymousReading: dbConfig.allow_anonymous_reading ?? true,
+              maintenanceMode: dbConfig.maintenance_mode ?? false,
+              featuredCategory: dbConfig.featured_category || 'All'
+            })
+          }
         } catch (e) {
           // Graceful catch
         } finally {
           setIsLoading(false)
         }
+
+        // Realtime subscription for site_config
+        const configChannel = supabase
+          .channel('public:site_config')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'site_config' }, async (payload: any) => {
+            if (payload.new) {
+              setSiteConfig({
+                siteName: payload.new.site_name || '',
+                siteLogo: payload.new.site_logo || '',
+                tagline: payload.new.tagline || '',
+                announcementBanner: payload.new.announcement_banner || '',
+                allowAnonymousReading: payload.new.allow_anonymous_reading ?? true,
+                maintenanceMode: payload.new.maintenance_mode ?? false,
+                featuredCategory: payload.new.featured_category || 'All'
+              })
+            }
+          })
+          .subscribe()
 
         // Realtime subscription for content_reports
         const reportsChannel = supabase
@@ -253,6 +300,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         return () => {
           subscription.unsubscribe()
+          supabase.removeChannel(configChannel)
           supabase.removeChannel(reportsChannel)
         }
       } catch (e) {
@@ -261,7 +309,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     initAuthListener()
-  }, [siteConfig.autoApproveAuthors])
+  }, [])
   const [activeCategory, setActiveCategory] = useState<string>('All')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false)
@@ -311,7 +359,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           username: 'alex_google',
           avatarUrl: 'https://lh3.googleusercontent.com/a/ACg8ocIq8w0X_placeholder=s96-c',
           role: 'reader',
-          verificationStatus: siteConfig.autoApproveAuthors ? 'approved' : 'none',
+          verificationStatus: 'none',
           bio: 'Authenticated via Google OAuth. Technical reader & subscriber.',
           joinedDate: new Date().toISOString().split('T')[0],
           bookmarks: []
@@ -798,14 +846,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const { createClient } = await import('@/lib/supabase/client')
       const supabase = createClient()
-      await supabase.from('site_config').update({
-        site_name: newConfig.siteName,
-        tagline: newConfig.tagline,
-        announcement_banner: newConfig.announcementBanner,
-        auto_approve_authors: newConfig.autoApproveAuthors,
-        maintenance_mode: newConfig.maintenanceMode,
-        updated_at: new Date().toISOString()
-      }).eq('id', 1)
+      const dbPayload: any = {}
+      if (newConfig.siteName !== undefined) dbPayload.site_name = newConfig.siteName
+      if (newConfig.siteLogo !== undefined) dbPayload.site_logo = newConfig.siteLogo
+      if (newConfig.tagline !== undefined) dbPayload.tagline = newConfig.tagline
+      if (newConfig.announcementBanner !== undefined) dbPayload.announcement_banner = newConfig.announcementBanner
+      if (newConfig.maintenanceMode !== undefined) dbPayload.maintenance_mode = newConfig.maintenanceMode
+      dbPayload.updated_at = new Date().toISOString()
+
+      await supabase.from('site_config').update(dbPayload).eq('id', 1)
     } catch (e) {
       console.error('Update site_config failed:', e)
     }

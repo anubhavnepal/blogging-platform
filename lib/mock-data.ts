@@ -18,10 +18,10 @@ export interface UserProfile {
 
 export interface SiteConfig {
   siteName: string
+  siteLogo?: string
   tagline: string
   announcementBanner: string
   allowAnonymousReading: boolean
-  autoApproveAuthors: boolean
   maintenanceMode: boolean
   featuredCategory: string
 }
@@ -134,10 +134,10 @@ export const MOCK_USERS: UserProfile[] = [
 
 export const MOCK_SITE_CONFIG: SiteConfig = {
   siteName: 'Chronicle',
+  siteLogo: '',
   tagline: 'Where architecture, code, and technical thoughts converge.',
   announcementBanner: '✨ Welcome to Chronicle — A high-signal publication hub for engineers and creators.',
   allowAnonymousReading: true,
-  autoApproveAuthors: false,
   maintenanceMode: false,
   featuredCategory: 'Engineering'
 }

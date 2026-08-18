@@ -149,9 +149,12 @@ export function Navbar() {
           {currentUser ? (
             <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
               <img
-                src={currentUser.avatarUrl}
+                src={currentUser.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
                 alt={currentUser.fullName}
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  e.currentTarget.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+                }}
                 className="w-8 h-8 rounded-full object-cover border border-slate-800"
               />
               <div className="hidden xl:flex flex-col text-left">

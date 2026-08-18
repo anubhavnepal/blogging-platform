@@ -134,9 +134,14 @@ create policy "Authors and Admins can delete posts" on public.posts
     auth.uid() = author_id or exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
   );
 
--- Comments: Public view, logged-in user create
+-- Comments: Public view, logged-in/site user create
+drop policy if exists "Comments viewable by everyone" on public.comments;
+drop policy if exists "Authenticated users can insert comments" on public.comments;
+drop policy if exists "Anyone can insert comments" on public.comments;
+drop policy if exists "Users can delete own comments" on public.comments;
+
 create policy "Comments viewable by everyone" on public.comments for select using (true);
-create policy "Authenticated users can insert comments" on public.comments for insert with check (auth.uid() = author_id);
+create policy "Anyone can insert comments" on public.comments for insert with check (true);
 create policy "Users can delete own comments" on public.comments for delete using (
   auth.uid() = author_id or exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
 );

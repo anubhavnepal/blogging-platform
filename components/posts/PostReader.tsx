@@ -144,8 +144,12 @@ export function PostReader({ postId }: { postId: string }) {
             {/* Right: Author Badge (Clean, frameless inline style) */}
             <div className="flex items-center gap-2 text-xs">
               <img
-                src={post.authorAvatar}
+                src={post.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
                 alt={post.authorName}
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  e.currentTarget.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+                }}
                 className="w-5 h-5 rounded-full object-cover ring-1 ring-emerald-500/40"
               />
               <span className="font-semibold text-slate-200 flex items-center gap-1">
@@ -242,7 +246,15 @@ export function PostReader({ postId }: { postId: string }) {
                   <div key={c.id} className="p-4 bg-[#070a0f] border border-slate-800/60 rounded-xl space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <img src={c.authorAvatar} alt={c.authorName} className="w-6 h-6 rounded-full object-cover" />
+                        <img
+                          src={c.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                          alt={c.authorName}
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+                          }}
+                          className="w-6 h-6 rounded-full object-cover"
+                        />
                         <span className="text-xs font-bold text-white">{c.authorName}</span>
                       </div>
                       <span className="text-[10px] text-slate-500 font-mono">{new Date(c.createdAt).toLocaleDateString()}</span>

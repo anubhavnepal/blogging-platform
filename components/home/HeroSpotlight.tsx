@@ -84,9 +84,12 @@ export function HeroSpotlight() {
               {/* Author Profile */}
               <div className="flex items-center gap-3">
                 <img
-                  src={featuredPost.authorAvatar}
+                  src={featuredPost.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
                   alt={featuredPost.authorName}
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    e.currentTarget.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+                  }}
                   className="w-9 h-9 rounded-full object-cover border border-emerald-500/40"
                 />
                 <div>

@@ -100,7 +100,15 @@ export function BookmarksView() {
 
               <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
                 <div className="flex items-center gap-2">
-                  <img src={post.authorAvatar} alt={post.authorName} className="w-6 h-6 rounded-full object-cover" />
+                  <img
+                    src={post.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                    alt={post.authorName}
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+                    }}
+                    className="w-6 h-6 rounded-full object-cover"
+                  />
                   <span className="font-semibold text-slate-300">{post.authorName}</span>
                 </div>
 

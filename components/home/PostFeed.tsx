@@ -164,8 +164,12 @@ export function PostFeed() {
                   <div className="px-5 py-3.5 border-t border-slate-800/80 bg-slate-950/60 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <img
-                        src={post.authorAvatar}
+                        src={post.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
                         alt={post.authorName}
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+                        }}
                         className="w-7 h-7 rounded-full object-cover border border-emerald-500/30"
                       />
                       <span className="text-xs font-bold text-slate-300 truncate max-w-[120px]">

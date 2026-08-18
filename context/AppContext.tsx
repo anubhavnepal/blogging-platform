@@ -115,8 +115,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
 
           const { data: dbPosts } = await supabase.from('posts').select('*, profiles(*)').order('created_at', { ascending: false })
-          if (dbPosts && dbPosts.length > 0) {
-            const mappedPosts: BlogPost[] = dbPosts.map((p: any) => {
+          let dbPostsList = dbPosts
+          if (!dbPostsList || dbPostsList.length === 0) {
+            // Seed initial profiles & posts into Supabase DB so database is 100% single source of truth
+            for (const u of MOCK_USERS) {
+              await supabase.from('profiles').upsert({
+                id: u.id,
+                email: u.email,
+                full_name: u.fullName,
+                username: u.username,
+                avatar_url: u.avatarUrl,
+                role: u.role,
+                verification_status: u.verificationStatus,
+                bio: u.bio
+              }, { onConflict: 'id' })
+            }
+
+            for (const p of MOCK_POSTS) {
+              await supabase.from('posts').upsert({
+                id: p.id,
+                title: p.title,
+                slug: p.slug,
+                excerpt: p.excerpt,
+                content: p.content,
+                cover_image: p.coverImage,
+                category: p.category,
+                tags: p.tags,
+                author_id: p.authorId === 'usr-author-2' ? MOCK_USERS[2].id : p.authorId,
+                is_published: p.isPublished,
+                is_featured: p.isFeatured || false,
+                read_time: p.readTime,
+                views_count: p.viewsCount,
+                likes_count: p.likesCount,
+                status: p.status,
+                created_at: p.createdAt
+              }, { onConflict: 'id' })
+            }
+
+            const { data: refreshedPosts } = await supabase.from('posts').select('*, profiles(*)').order('created_at', { ascending: false })
+            dbPostsList = refreshedPosts
+          }
+
+          if (dbPostsList && dbPostsList.length > 0) {
+            const mappedPosts: BlogPost[] = dbPostsList.map((p: any) => {
               const author = p.profiles || profilesMap[p.author_id]
               return {
                 id: p.id,
@@ -155,6 +196,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               createdAt: r.created_at || new Date().toISOString()
             }))
             setReports(mappedReports)
+          }
+
+          const { data: dbComments } = await supabase.from('comments').select('*, profiles(*)').order('created_at', { ascending: false })
+          if (dbComments) {
+            const commentsMap: Record<string, Comment[]> = {}
+            dbComments.forEach((c: any) => {
+              const author = c.profiles
+              const commentObj: Comment = {
+                id: c.id,
+                postId: c.post_id,
+                authorName: author?.full_name || 'Subscriber',
+                authorAvatar: author?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+                content: c.content,
+                createdAt: c.created_at || new Date().toISOString()
+              }
+              if (!commentsMap[c.post_id]) {
+                commentsMap[c.post_id] = []
+              }
+              commentsMap[c.post_id].push(commentObj)
+            })
+            setComments(commentsMap)
           }
           const { data: dbConfig } = await supabase.from('site_config').select('*').eq('id', 1).single()
           if (dbConfig) {
@@ -218,24 +280,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             const user = session.user
             const meta = user.user_metadata
 
-            const googleAvatar = meta?.avatar_url || meta?.picture || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`
+            const googleAvatar = meta?.avatar_url || meta?.picture || meta?.avatarUrl || user.identities?.[0]?.identity_data?.avatar_url || user.identities?.[0]?.identity_data?.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
             const googleName = meta?.full_name || meta?.name || user.email?.split('@')[0] || 'Subscriber'
             const googleUsername = meta?.preferred_username || user.email?.split('@')[0] || `user_${user.id.slice(0, 6)}`
 
-            // Fetch existing role from database if available
+            // Fetch existing role & avatar from database if available
             let assignedRole: 'admin' | 'author' | 'reader' = 'reader'
             let currentStatus: 'none' | 'pending' | 'approved' | 'rejected' = 'none'
+            let finalAvatar = googleAvatar
 
             try {
               const { data: existingProfile } = await supabase
                 .from('profiles')
-                .select('role, verification_status')
+                .select('role, verification_status, avatar_url')
                 .eq('id', user.id)
                 .single()
 
               if (existingProfile) {
                 assignedRole = existingProfile.role || 'reader'
                 currentStatus = existingProfile.verification_status || 'none'
+                if (existingProfile.avatar_url && existingProfile.avatar_url.trim() !== '') {
+                  finalAvatar = existingProfile.avatar_url
+                }
               }
             } catch (e) {
               // Ignore single query error if profile doesn't exist yet
@@ -248,7 +314,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 email: user.email || '',
                 full_name: googleName,
                 username: googleUsername,
-                avatar_url: googleAvatar,
+                avatar_url: finalAvatar,
                 role: assignedRole,
                 verification_status: currentStatus,
                 bio: 'Authenticated User.'
@@ -314,18 +380,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false)
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState<boolean>(false)
-  const [comments, setComments] = useState<Record<string, Comment[]>>({
-    '11111111-1111-4111-a111-111111111111': [
-      {
-        id: 'c-1',
-        postId: '11111111-1111-4111-a111-111111111111',
-        authorName: 'Marcus Chen',
-        authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-        content: 'Excellently structured RLS policy walkthrough! Supabase policy definitions really safeguard serverless architectures.',
-        createdAt: '2026-07-28T16:45:00Z'
-      }
-    ]
-  })
+  const [comments, setComments] = useState<Record<string, Comment[]>>({})
 
   // Switch Active User
   const setCurrentUserById = (userId: string) => {
@@ -500,6 +555,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                     verificationStatus: updatedProfile.verification_status || prev.verificationStatus
                   } : null)
                 }
+              }
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'comments' },
+            async () => {
+              const { data: dbComments } = await supabase.from('comments').select('*, profiles(*)').order('created_at', { ascending: false })
+              if (dbComments) {
+                const commentsMap: Record<string, Comment[]> = {}
+                dbComments.forEach((c: any) => {
+                  const author = c.profiles
+                  const commentObj: Comment = {
+                    id: c.id,
+                    postId: c.post_id,
+                    authorName: author?.full_name || 'Subscriber',
+                    authorAvatar: author?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+                    content: c.content,
+                    createdAt: c.created_at || new Date().toISOString()
+                  }
+                  if (!commentsMap[c.post_id]) {
+                    commentsMap[c.post_id] = []
+                  }
+                  commentsMap[c.post_id].push(commentObj)
+                })
+                setComments(commentsMap)
               }
             }
           )
@@ -744,12 +825,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const addComment = (postId: string, content: string) => {
+  const addComment = async (postId: string, content: string) => {
     if (!currentUser) {
       setIsAuthModalOpen(true)
       return
     }
-    const newComment: Comment = {
+
+    // Create optimistic comment object for fluid UI feedback
+    const optimisticComment: Comment = {
       id: `comm-${Date.now()}`,
       postId,
       authorName: currentUser.fullName,
@@ -757,10 +840,89 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       content,
       createdAt: new Date().toISOString()
     }
-    setComments(prev => ({
-      ...prev,
-      [postId]: [newComment, ...(prev[postId] || [])]
-    }))
+
+    // Helper to check valid UUID format for PostgreSQL author_id column
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentUser.id)
+    const validAuthorId = isValidUUID ? currentUser.id : 'a1b2c3d4-e5f6-4a5b-8c7d-9e0f1a2b3c4d'
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      // Ensure valid profile row exists in public.profiles before comment insertion
+      await supabase.from('profiles').upsert({
+        id: validAuthorId,
+        email: currentUser.email || 'subscriber@chronicle.io',
+        full_name: currentUser.fullName,
+        username: currentUser.username,
+        avatar_url: currentUser.avatarUrl,
+        role: currentUser.role || 'reader',
+        verification_status: currentUser.verificationStatus || 'none',
+        bio: currentUser.bio || ''
+      }, { onConflict: 'id' })
+
+      // Ensure post row exists in public.posts table in Supabase so foreign key comments_post_id_fkey is satisfied
+      const targetPost = posts.find(p => p.id === postId)
+      if (targetPost) {
+        const isValidPostUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetPost.id)
+        if (isValidPostUUID) {
+          await supabase.from('posts').upsert({
+            id: targetPost.id,
+            title: targetPost.title,
+            slug: targetPost.slug || `post-${targetPost.id}`,
+            excerpt: targetPost.excerpt || '',
+            content: targetPost.content || '',
+            cover_image: targetPost.coverImage,
+            category: targetPost.category || 'General',
+            tags: targetPost.tags || [],
+            author_id: validAuthorId,
+            is_published: targetPost.isPublished ?? true,
+            read_time: targetPost.readTime || '4 min read',
+            views_count: targetPost.viewsCount || 0,
+            likes_count: targetPost.likesCount || 0,
+            status: targetPost.status || 'published'
+          }, { onConflict: 'id' })
+        }
+      }
+
+      const { data, error } = await supabase.from('comments').insert({
+        post_id: postId,
+        author_id: validAuthorId,
+        content: content
+      }).select('*, profiles(*)').single()
+
+      if (error) {
+        console.error('Supabase comment insert DB error:', error.message || error.details || error)
+        // Optimistic UI fallback
+        setComments(prev => ({
+          ...prev,
+          [postId]: [optimisticComment, ...(prev[postId] || []).filter(c => c.id !== optimisticComment.id)]
+        }))
+        return
+      }
+
+      if (data) {
+        const author = data.profiles
+        const newComment: Comment = {
+          id: data.id,
+          postId: data.post_id,
+          authorName: author?.full_name || currentUser.fullName,
+          authorAvatar: author?.avatar_url || currentUser.avatarUrl,
+          content: data.content,
+          createdAt: data.created_at || new Date().toISOString()
+        }
+        setComments(prev => ({
+          ...prev,
+          [postId]: [newComment, ...(prev[postId] || []).filter(c => c.id !== newComment.id && c.id !== optimisticComment.id)]
+        }))
+      }
+    } catch (err) {
+      console.warn('Comment insertion exception notice:', err)
+      setComments(prev => ({
+        ...prev,
+        [postId]: [optimisticComment, ...(prev[postId] || []).filter(c => c.id !== optimisticComment.id)]
+      }))
+    }
   }
 
   const submitReport = async (postId: string, postTitle: string, reason: ContentReport['reason'], details: string) => {

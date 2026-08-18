@@ -361,9 +361,12 @@ export function AdminControlCenter() {
                           <td className="py-4 px-5 align-top">
                             <div className="flex items-start gap-3">
                               <img 
-                                src={user.avatarUrl} 
+                                src={user.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'} 
                                 alt={user.fullName} 
                                 referrerPolicy="no-referrer" 
+                                onError={(e) => {
+                                  e.currentTarget.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+                                }}
                                 className="w-9 h-9 rounded-full object-cover border border-slate-700/80 shrink-0 mt-0.5" 
                               />
                               <div>

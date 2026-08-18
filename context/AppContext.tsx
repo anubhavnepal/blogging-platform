@@ -42,7 +42,7 @@ interface AppContextType {
   updatePost: (id: string, updatedFields: Partial<BlogPost>) => void
   deletePost: (id: string) => void
   toggleLikePost: (id: string) => void
-  addComment: (postId: string, content: string) => void
+  addComment: (postId: string, content: string, parentId?: string | null) => void
   submitReport: (postId: string, postTitle: string, reason: ContentReport['reason'], details: string) => void
   
   // Admin Actions
@@ -198,7 +198,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             setReports(mappedReports)
           }
 
-          const { data: dbComments } = await supabase.from('comments').select('*, profiles(*)').order('created_at', { ascending: false })
+          const { data: dbComments } = await supabase.from('comments').select('*, profiles(*)').order('created_at', { ascending: true })
           if (dbComments) {
             const commentsMap: Record<string, Comment[]> = {}
             dbComments.forEach((c: any) => {
@@ -206,6 +206,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               const commentObj: Comment = {
                 id: c.id,
                 postId: c.post_id,
+                parentId: c.parent_id || null,
                 authorName: author?.full_name || 'Subscriber',
                 authorAvatar: author?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
                 content: c.content,
@@ -562,7 +563,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             'postgres_changes',
             { event: '*', schema: 'public', table: 'comments' },
             async () => {
-              const { data: dbComments } = await supabase.from('comments').select('*, profiles(*)').order('created_at', { ascending: false })
+              const { data: dbComments } = await supabase.from('comments').select('*, profiles(*)').order('created_at', { ascending: true })
               if (dbComments) {
                 const commentsMap: Record<string, Comment[]> = {}
                 dbComments.forEach((c: any) => {
@@ -570,6 +571,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   const commentObj: Comment = {
                     id: c.id,
                     postId: c.post_id,
+                    parentId: c.parent_id || null,
                     authorName: author?.full_name || 'Subscriber',
                     authorAvatar: author?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
                     content: c.content,
@@ -825,7 +827,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const addComment = async (postId: string, content: string) => {
+  const addComment = async (postId: string, content: string, parentId?: string | null) => {
     if (!currentUser) {
       setIsAuthModalOpen(true)
       return
@@ -835,6 +837,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const optimisticComment: Comment = {
       id: `comm-${Date.now()}`,
       postId,
+      parentId: parentId || null,
       authorName: currentUser.fullName,
       authorAvatar: currentUser.avatarUrl,
       content,
@@ -885,10 +888,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // Check if parentId is a valid UUID
+      const isValidParentUUID = parentId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(parentId) ? parentId : null
+
       const { data, error } = await supabase.from('comments').insert({
         post_id: postId,
         author_id: validAuthorId,
-        content: content
+        content: content,
+        parent_id: isValidParentUUID
       }).select('*, profiles(*)').single()
 
       if (error) {
@@ -906,6 +913,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const newComment: Comment = {
           id: data.id,
           postId: data.post_id,
+          parentId: data.parent_id || null,
           authorName: author?.full_name || currentUser.fullName,
           authorAvatar: author?.avatar_url || currentUser.avatarUrl,
           content: data.content,

@@ -29,6 +29,7 @@ export interface SiteConfig {
 export interface Comment {
   id: string
   postId: string
+  parentId?: string | null
   authorName: string
   authorAvatar: string
   content: string
